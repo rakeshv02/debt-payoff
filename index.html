@@ -1,42 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Debt Payoff Calculator — Avalanche vs Snowball Method | Tabutility</title>
+  <meta name="description" content="Compare the debt avalanche and debt snowball payoff strategies. See exactly how long it takes and how much interest you save." />
+  <meta name="keywords" content="debt payoff calculator, debt avalanche, debt snowball, pay off debt, debt free calculator" />
+  <link rel="canonical" href="https://debt-payoff.tabutility.com/" />
+  <meta property="og:title" content="Debt Payoff Calculator — Avalanche vs Snowball" />
+  <meta property="og:description" content="See how fast you can become debt free and how much interest you save with avalanche vs snowball methods." />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>" />
+  <meta name="robots" content="index, follow" />
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039091592734005" crossorigin="anonymous"></script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-78VZWJ5B1W"></script>
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-78VZWJ5B1W');</script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body style="margin:0;background:#f8faff;font-family:'Segoe UI',Arial,sans-serif">
+<div id="root"></div>
+<script type="text/babel">
+//<![CDATA[
+const { useState } = React;
 
-    <!-- ✏️ UPDATE THESE FOR EVERY NEW TOOL -->
-    <title>TOOL NAME — TOOL TAGLINE | Tabutility</title>
-    <meta name="description" content="TOOL DESCRIPTION. No sign-up, runs in your browser." />
-    <meta name="keywords" content="KEYWORD 1, KEYWORD 2, KEYWORD 3, free TOOL NAME" />
-    <link rel="canonical" href="https://SUBDOMAIN.tabutility.com/" />
-    <meta property="og:url" content="https://SUBDOMAIN.tabutility.com/" />
-    <meta property="og:title" content="TOOL NAME — TOOL TAGLINE" />
-    <meta property="og:description" content="TOOL DESCRIPTION. Free, no sign-up." />
-    <meta name="twitter:title" content="TOOL NAME — TOOL TAGLINE" />
-    <meta name="twitter:description" content="TOOL DESCRIPTION. Free, no sign-up." />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>EMOJI</text></svg>" />
-    <!-- ✏️ END OF SECTION TO UPDATE -->
+function simulatePayoff(debts, extraPayment, strategy) {
+  let ds = debts.map((d,i) => ({ ...d, balance: Number(d.balance), rate: Number(d.rate)/100/12, min: Number(d.min), id:i }));
+  if (strategy === 'avalanche') ds.sort((a,b) => b.rate - a.rate);
+  else ds.sort((a,b) => a.balance - b.balance);
 
-    <!-- DO NOT CHANGE ANYTHING BELOW THIS LINE -->
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Tabutility" />
-    <meta name="twitter:card" content="summary" />
-    <meta name="robots" content="index, follow" />
+  let totalInterest = 0, months = 0;
+  while (ds.some(d => d.balance > 0) && months < 600) {
+    months++;
+    let extra = extraPayment;
+    for (let d of ds) {
+      if (d.balance <= 0) continue;
+      const interest = d.balance * d.rate;
+      totalInterest += interest;
+      d.balance = d.balance + interest - d.min;
+      if (d.balance < 0) { extra += Math.abs(d.balance); d.balance = 0; }
+    }
+    const first = ds.find(d => d.balance > 0);
+    if (first) { first.balance = Math.max(0, first.balance - extra); }
+  }
+  return { months, totalInterest };
+}
 
-    <!-- Google AdSense -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039091592734005" crossorigin="anonymous"></script>
+function fmt(n) { return '$' + Math.round(n).toLocaleString(); }
 
-    <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-78VZWJ5B1W"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-78VZWJ5B1W');
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+function App() {
+  const [debts, setDebts] = useState([
+    { name: 'Credit Card 1', balance: 5000, rate: 22, min: 100 },
+    { name: 'Credit Card 2', balance: 3200, rate: 18, min: 64 },
+    { name: 'Car Loan', balance: 8000, rate: 7, min: 180 },
+  ]);
+  const [extra, setExtra] = useState(200);
+
+  const updateDebt = (i, field, val) => {
+    const next = [...debts];
+    next[i] = { ...next[i], [field]: val };
+    setDebts(next);
+  };
+  const addDebt = () => setDebts([...debts, { name: 'New Debt', balance: 1000, rate: 10, min: 25 }]);
+  const removeDebt = (i) => setDebts(debts.filter((_,j)=>j!==i));
+
+  const valid = debts.every(d => Number(d.balance) > 0 && Number(d.min) > 0);
+  const av = valid ? simulatePayoff(debts, Number(extra)||0, 'avalanche') : null;
+  const sn = valid ? simulatePayoff(debts, Number(extra)||0, 'snowball') : null;
+  const totalDebt = debts.reduce((s,d)=>s+Number(d.balance),0);
+
+  return (
+    <div style={{maxWidth:560,margin:'0 auto',paddingBottom:40}}>
+      <div style={{background:'#1a1a2e',padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <a href="https://tabutility.com" style={{color:'#a5b4fc',textDecoration:'none',fontSize:14}}>← All Tools</a>
+        <span style={{color:'#fff',fontWeight:700,fontSize:15}}>⚡ Tabutility</span>
+      </div>
+      <div style={{background:'linear-gradient(135deg,#7c3aed,#5b21b6)',padding:'28px 20px',textAlign:'center',color:'#fff'}}>
+        <div style={{fontSize:36,marginBottom:8}}>💳</div>
+        <h1 style={{margin:'0 0 6px',fontSize:22,fontWeight:900}}>Debt Payoff Calculator</h1>
+        <p style={{margin:0,fontSize:13,opacity:0.85}}>Avalanche vs Snowball — see which saves more</p>
+      </div>
+      <div style={{padding:20}}>
+        {debts.map((d,i)=>(
+          <div key={i} style={{background:'#fff',borderRadius:12,padding:16,boxShadow:'0 2px 10px rgba(0,0,0,0.06)',marginBottom:12}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+              <input value={d.name} onChange={e=>updateDebt(i,'name',e.target.value)}
+                style={{fontSize:14,fontWeight:700,border:'none',outline:'none',color:'#1a1a2e',flex:1}} />
+              {debts.length > 1 && <button onClick={()=>removeDebt(i)} style={{background:'none',border:'none',cursor:'pointer',color:'#ef4444',fontSize:16}}>✕</button>}
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
+              {[['Balance','balance','$'],['APR %','rate',''],['Min Pay','min','$']].map(([label,field,prefix])=>(
+                <div key={field}>
+                  <div style={{fontSize:11,color:'#6b7280',marginBottom:3}}>{label}</div>
+                  <div style={{position:'relative'}}>
+                    {prefix && <span style={{position:'absolute',left:8,top:'50%',transform:'translateY(-50%)',color:'#9ca3af',fontSize:13}}>{prefix}</span>}
+                    <input type="number" value={d[field]} onChange={e=>updateDebt(i,field,e.target.value)}
+                      style={{width:'100%',padding:`8px 8px 8px ${prefix?'20px':'8px'}`,borderRadius:8,border:'1px solid #e5e7eb',fontSize:14,boxSizing:'border-box'}} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        <button onClick={addDebt} style={{width:'100%',padding:10,borderRadius:10,border:'2px dashed #7c3aed',background:'none',color:'#7c3aed',fontWeight:600,cursor:'pointer',marginBottom:16}}>+ Add Debt</button>
+
+        <div style={{background:'#fff',borderRadius:12,padding:16,boxShadow:'0 2px 10px rgba(0,0,0,0.06)',marginBottom:16}}>
+          <label style={{fontSize:13,fontWeight:600,color:'#374151',display:'block',marginBottom:6}}>Extra Monthly Payment</label>
+          <div style={{position:'relative'}}>
+            <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'#6b7280'}}>$</span>
+            <input type="number" value={extra} onChange={e=>setExtra(e.target.value)}
+              style={{width:'100%',padding:'10px 12px 10px 26px',borderRadius:10,border:'2px solid #e5e7eb',fontSize:16,boxSizing:'border-box'}} />
+          </div>
+        </div>
+
+        {av && sn && (
+          <>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+              {[{label:'🏔️ Avalanche',color:'#7c3aed',bg:'#f5f3ff',r:av},{label:'⛄ Snowball',color:'#0ea5e9',bg:'#f0f9ff',r:sn}].map(({label,color,bg,r})=>(
+                <div key={label} style={{background:bg,borderRadius:12,padding:16,border:`2px solid ${color}20`}}>
+                  <div style={{fontWeight:700,color,marginBottom:8,fontSize:14}}>{label}</div>
+                  <div style={{fontSize:22,fontWeight:900,color:'#1a1a2e'}}>{Math.floor(r.months/12)}y {r.months%12}m</div>
+                  <div style={{fontSize:12,color:'#6b7280',marginTop:4}}>Interest: <strong style={{color:'#ef4444'}}>{fmt(r.totalInterest)}</strong></div>
+                </div>
+              ))}
+            </div>
+            <div style={{background:'#fff',borderRadius:12,padding:16,boxShadow:'0 2px 10px rgba(0,0,0,0.06)'}}>
+              <div style={{fontSize:13,color:'#6b7280'}}>Total Debt</div>
+              <div style={{fontSize:28,fontWeight:900,color:'#ef4444'}}>{fmt(totalDebt)}</div>
+              <div style={{marginTop:10,fontSize:13,color:'#374151',lineHeight:1.6}}>
+                {av.totalInterest < sn.totalInterest
+                  ? `🏔️ Avalanche saves you ${fmt(sn.totalInterest - av.totalInterest)} in interest and finishes ${Math.abs(sn.months - av.months)} months sooner.`
+                  : `⛄ Snowball finishes ${Math.abs(av.months - sn.months)} months sooner in this scenario. Avalanche saves ${fmt(av.totalInterest - sn.totalInterest>0?av.totalInterest-sn.totalInterest:0)} in interest.`}
+              </div>
+            </div>
+          </>
+        )}
+        <div style={{background:'#faf5ff',borderRadius:12,padding:16,marginTop:16,fontSize:13,color:'#7c3aed',lineHeight:1.6}}>
+          <strong>Avalanche</strong> pays highest-rate debt first — saves the most interest. <strong>Snowball</strong> pays smallest balance first — gives faster early wins and motivation.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+//]]>
+</script>
+</body>
 </html>
